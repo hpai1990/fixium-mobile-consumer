@@ -56,8 +56,37 @@ services:
       KAFKA_GROUP_ID: mobile-billing-consumer
     restart: unless-stopped
 
+  iot-usage-kafka-logger:
+    build:
+      context: ../iot-usage-kafka-logger
+      dockerfile: Dockerfile
+    container_name: iot-usage-kafka-logger
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      KAFKA_BROKER: kafka:9092
+      NODE_ENV: production
+      SEED_DATABASE: "true"  # Set to "false" to skip seeding
+    volumes:
+      - iot-usage-db:/app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 networks:
   default:
     name: mobile-usage-network
+
+volumes:
+  iot-usage-db:
+    driver: local
 
 # Made with Bob
